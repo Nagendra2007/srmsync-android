@@ -37,13 +37,33 @@ jobs:
           name: SRMSync-apk
           path: SRMSync.apk
 
-      - name: Publish to the "apk-latest" release
+      - name: Update the "apk-latest" release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release delete apk-latest --yes --cleanup-tag || true
-          gh release create apk-latest SRMSync.apk \
-            --target "$GITHUB_SHA" \
-            --title "Srm Sync APK (latest)" \
-            --notes "Built from commit ${GITHUB_SHA::7}. Open this page on your phone and tap SRMSync.apk to download it."
+          NOTES="Built from commit ${GITHUB_SHA::7}. Easiest download page: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          if gh release view apk-latest > /dev/null 2>&1; then
+            # Replace the file in place, so the download link never disappears.
+            gh release upload apk-latest SRMSync.apk --clobber
+            gh release edit apk-latest --title "Srm Sync APK (latest)" --notes "$NOTES"
+          else
+            gh release create apk-latest SRMSync.apk --target "$GITHUB_SHA" --title "Srm Sync APK (latest)" --notes "$NOTES"
+          fi
+
+      - name: Publish the download page (gh-pages branch)
+        run: |
+          VERSION=$(grep -oP "versionName '\K[^']+" app/build.gradle)
+          SIZE=$(( $(stat -c%s SRMSync.apk) / 1024 ))
+          rm -rf site && mkdir site
+          cp download-page/* site/
+          cp SRMSync.apk site/SrmSync.apk
+          sed -i "s/__VERSION__/$VERSION/; s/__SIZE__/${SIZE} KB/; s/__DATE__/$(date -u +'%-d %b %Y')/; s/__SHA__/${GITHUB_SHA::7}/" site/index.html
+          touch site/.nojekyll
+          cd site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Download page for ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
