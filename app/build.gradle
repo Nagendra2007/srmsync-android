@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.srmsync.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.srmsync.app'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    // One fixed key, so a new APK installs over the old one
+    // instead of failing with "App not installed".
+    signingConfigs {
+        shared {
+            storeFile file('srmsync.keystore')
+            storePassword 'srmsync'
+            keyAlias 'srmsync'
+            keyPassword 'srmsync'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.shared
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.shared
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Play Store checks (like the target SDK deadline) don't apply to a
+    // sideloaded APK, so don't let them stop the build.
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
