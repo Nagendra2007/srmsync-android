@@ -86,6 +86,15 @@ final class Prefs {
     boolean askedNotificationPermission() { return sp.getBoolean("askedNotif", false); }
     void setAskedNotificationPermission() { sp.edit().putBoolean("askedNotif", true).apply(); }
 
+    // ---- update check ----
+    long lastUpdateCheck() { return sp.getLong("lastUpdateCheck", 0L); }
+    void setLastUpdateCheck(long v) { sp.edit().putLong("lastUpdateCheck", v).apply(); }
+    int dismissedVersion() { return sp.getInt("dismissedVersion", 0); }
+    long dismissedAt() { return sp.getLong("dismissedAt", 0L); }
+    void setDismissedUpdate(int version, long at) {
+        sp.edit().putInt("dismissedVersion", version).putLong("dismissedAt", at).apply();
+    }
+
     // ---- ringer bookkeeping ----
     boolean appSilenced() { return sp.getBoolean("appSilenced", false); }
     int prevRinger() { return sp.getInt("prevRinger", -1); }

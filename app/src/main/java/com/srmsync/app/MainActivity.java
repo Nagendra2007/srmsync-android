@@ -70,7 +70,11 @@ public class MainActivity extends Activity {
         }
 
         SilentScheduler.refresh(this);
-        if (!prefs.onboarded()) showWelcome();
+        if (!prefs.onboarded()) {
+            showWelcome();
+        } else {
+            UpdateChecker.maybeCheck(this);   // not on the very first launch, one popup at a time
+        }
     }
 
     private void setUpWebView() {

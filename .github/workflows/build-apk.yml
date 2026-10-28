@@ -42,7 +42,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          NOTES="Built from commit ${GITHUB_SHA::7}. Easiest download page: https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          VERSION_CODE=$(grep -oP "versionCode \K\d+" app/build.gradle)
+          VERSION_NAME=$(grep -oP "versionName '\K[^']+" app/build.gradle)
+          PAGE="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          # The app reads the versionCode line to know an update exists. Keep it.
+          NOTES=$(printf 'Srm Sync %s. Download page: %s\n\nversionCode: %s\nversionName: %s\ncommit: %s' \
+            "$VERSION_NAME" "$PAGE" "$VERSION_CODE" "$VERSION_NAME" "${GITHUB_SHA::7}")
           if gh release view apk-latest > /dev/null 2>&1; then
             # Replace the file in place, so the download link never disappears.
             gh release upload apk-latest SRMSync.apk --clobber
