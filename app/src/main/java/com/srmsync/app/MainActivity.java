@@ -103,6 +103,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 checkLogin();
+                view.evaluateJavascript(ADD_SHARE_TO_MENU_JS, null);
             }
 
             @Override
@@ -113,6 +114,31 @@ public class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------ timetable sync
+
+    /**
+     * Adds a "Share" button to the website's own menu (the arc that opens from the round
+     * button). It uses the site's classes, so it looks and moves like the other items, and
+     * the site's own click handler closes the menu. The website itself is not changed:
+     * the button only exists inside the app.
+     */
+    private static final String ADD_SHARE_TO_MENU_JS =
+        "(function(){if(window.__srmSyncShare)return;"
+        + "var ICON='<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" "
+        + "stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"18\" cy=\"5\" r=\"3\"/>"
+        + "<circle cx=\"6\" cy=\"12\" r=\"3\"/><circle cx=\"18\" cy=\"19\" r=\"3\"/>"
+        + "<line x1=\"8.6\" y1=\"13.5\" x2=\"15.4\" y2=\"17.5\"/><line x1=\"15.4\" y1=\"6.5\" x2=\"8.6\" y2=\"10.5\"/></svg>';"
+        + "function add(){var box=document.getElementById('radialMenuItems');if(!box)return false;"
+        + "if(box.querySelector('[data-action=\"srmsyncShare\"]'))return true;"
+        + "var b=document.createElement('button');b.type='button';b.className='radial-item menu-item';"
+        + "b.setAttribute('data-action','srmsyncShare');"
+        + "b.setAttribute('data-index',String(box.querySelectorAll('.radial-item').length));"
+        + "b.innerHTML='<span class=\"radial-item-icon\">'+ICON+'</span><span class=\"radial-item-label\">Share</span>';"
+        + "b.addEventListener('click',function(){try{SRMSyncApp.openShare()}catch(e){}});"
+        + "box.appendChild(b);return true}"
+        + "window.__srmSyncShare=true;"
+        + "if(!add()){var n=0,t=setInterval(function(){if(add()||++n>30)clearInterval(t)},1000)}"
+        + "var box=document.getElementById('radialMenuItems');"
+        + "if(box)new MutationObserver(function(){add()}).observe(box,{childList:true})})()";
 
     /** Reads the login session id the website saved (either storage), or "" if logged out. */
     private static final String READ_SESSION_JS =
@@ -161,11 +187,25 @@ public class MainActivity extends Activity {
 
     private volatile boolean showSyncToast;
 
+    /** Fetch timetable, attendance and marks right now (used by Share when nothing is saved yet). */
+    void requestSync() {
+        prefs.setSyncRequested(true);
+        Toast.makeText(this, "Fetching your data\u2026", Toast.LENGTH_SHORT).show();
+        checkLogin();
+    }
+
     /** The website page calls these. They run on a background thread. */
     private final class Bridge {
         @JavascriptInterface
         public void onAttendance(String sessionId, int status, String body) {
             AttendanceWatch.handle(MainActivity.this, status, body);
+        }
+
+        @JavascriptInterface
+        public void openShare() {
+            runOnUiThread(() -> {
+                if (!isFinishing()) ShareMenu.open(MainActivity.this);
+            });
         }
 
         @JavascriptInterface

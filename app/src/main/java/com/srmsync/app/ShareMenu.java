@@ -16,16 +16,28 @@ final class ShareMenu {
 
     private ShareMenu() {}
 
+    /** Opened from the "Share" button in the website's menu. */
+    static void open(MainActivity a) {
+        new AlertDialog.Builder(a)
+            .setTitle("Share")
+            .setItems(new String[] { "Timetable", "Attendance", "Internal marks" }, (d, which) -> {
+                if (which == 0) timetable(a);
+                else if (which == 1) attendance(a);
+                else marks(a);
+            })
+            .show();
+    }
+
     // ------------------------------------------------------------------ timetable
 
-    static void timetable(Activity a) {
+    static void timetable(MainActivity a) {
         Prefs p = new Prefs(a);
         List<Timetable.Block> all = Timetable.fromJson(p.blocksJson());
         if (all.isEmpty()) {
             missing(a, "timetable");
             return;
         }
-        String[] options = { "Whole week as image", "Today as image", "Whole week as text" };
+        String[] options = { "Whole week as a table (image)", "Today as image", "Whole week as text" };
         new AlertDialog.Builder(a)
             .setTitle("Share timetable")
             .setItems(options, (d, which) -> {
@@ -57,7 +69,7 @@ final class ShareMenu {
 
     // ------------------------------------------------------------------ attendance
 
-    static void attendance(Activity a) {
+    static void attendance(MainActivity a) {
         Prefs p = new Prefs(a);
         List<AttendanceWatch.Subject> list = AttendanceWatch.saved(p);
         if (list.isEmpty()) {
@@ -87,7 +99,7 @@ final class ShareMenu {
 
     // ------------------------------------------------------------------ marks
 
-    static void marks(Activity a) {
+    static void marks(MainActivity a) {
         Prefs p = new Prefs(a);
         List<Marks.Subject> list = Marks.saved(p);
         if (list.isEmpty()) {
@@ -162,16 +174,13 @@ final class ShareMenu {
         }
     }
 
-    /** Nothing saved yet: go back to the website so the next sync fetches it. */
-    private static void missing(Activity a, String what) {
+    /** Nothing saved yet: fetch it now through the website. */
+    private static void missing(MainActivity a, String what) {
         new AlertDialog.Builder(a)
             .setTitle("No " + what + " yet")
-            .setMessage("Srm Sync saves your " + what + " when you're logged in. Go back, wait a few seconds, "
-                + "then try sharing again.")
-            .setPositiveButton("Go back and fetch", (d, w) -> {
-                new Prefs(a).setSyncRequested(true);
-                a.finish();
-            })
+            .setMessage("Srm Sync saves your " + what + " in the background while you're logged in. "
+                + "Fetch it now, then try sharing again in a few seconds.")
+            .setPositiveButton("Fetch now", (d, w) -> a.requestSync())
             .setNegativeButton("Cancel", null)
             .show();
     }
