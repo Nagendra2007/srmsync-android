@@ -27,12 +27,14 @@ final class Timetable {
         final int start;
         final int end;
         final String label;
+        final String room;
 
-        Block(int day, int start, int end, String label) {
+        Block(int day, int start, int end, String label, String room) {
             this.day = day;
             this.start = start;
             this.end = end;
             this.label = label;
+            this.room = room;
         }
     }
 
@@ -110,7 +112,7 @@ final class Timetable {
                 }
                 String label = (title.isEmpty() || title.equalsIgnoreCase(clean)) ? clean : clean + " \u00b7 " + title;
 
-                out.add(new Block(day, range[0], range[1], label));
+                out.add(new Block(day, range[0], range[1], label, first(slot, "room", "roomNo")));
             }
         }
 
@@ -129,6 +131,7 @@ final class Timetable {
                 o.put("start", b.start);
                 o.put("end", b.end);
                 o.put("label", b.label);
+                o.put("room", b.room);
                 arr.put(o);
             }
         } catch (JSONException ignored) {
@@ -143,7 +146,8 @@ final class Timetable {
             JSONArray arr = new JSONArray(json);
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.getJSONObject(i);
-                out.add(new Block(o.getInt("day"), o.getInt("start"), o.getInt("end"), o.optString("label", "")));
+                out.add(new Block(o.getInt("day"), o.getInt("start"), o.getInt("end"), o.optString("label", ""),
+                    o.optString("room", "")));
             }
         } catch (JSONException ignored) {
             // A broken saved timetable behaves like no timetable.

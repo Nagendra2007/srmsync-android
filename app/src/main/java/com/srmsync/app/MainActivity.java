@@ -78,7 +78,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);          // the site keeps its login in localStorage
         s.setSupportZoom(false);
-        s.setUserAgentString(s.getUserAgentString() + " SrmSyncApp/1.2");
+        s.setUserAgentString(s.getUserAgentString() + " SrmSyncApp/1.3");
 
         web.addJavascriptInterface(new Bridge(), "SRMSyncApp");
         web.setWebChromeClient(new WebChromeClient());   // makes alert()/confirm() work
@@ -116,12 +116,19 @@ public class MainActivity extends Activity {
         + "return sessionStorage.getItem('sessionId')||localStorage.getItem('sessionId')||''}"
         + "catch(e){return ''}})()";
 
-    /** Asks the page itself to fetch /api/timetable and hand the answer to the app. */
+    /**
+     * Asks the page itself to fetch the timetable, then attendance (one after the other,
+     * so they don't trip over each other on the server), and hand both to the app.
+     */
     private static String fetchTimetableJs(String sessionId) {
         String sid = JSONObject.quote(sessionId);
-        return "(function(){fetch(location.origin+'/api/timetable',{headers:{'X-Client-Session':" + sid + "}})"
-            + ".then(function(r){return r.text().then(function(t){SRMSyncApp.onTimetable(" + sid + ",r.status,t)})})"
-            + ".catch(function(e){SRMSyncApp.onTimetable(" + sid + ",0,String(e))});return 'started'})()";
+        return "(function(){var h={'X-Client-Session':" + sid + "};"
+            + "function get(path,cb){return fetch(location.origin+path,{headers:h})"
+            + ".then(function(r){return r.text().then(function(t){cb(r.status,t)})})"
+            + ".catch(function(e){cb(0,String(e))})}"
+            + "get('/api/timetable',function(s,t){SRMSyncApp.onTimetable(" + sid + ",s,t)})"
+            + ".then(function(){return get('/api/attendance',function(s,t){SRMSyncApp.onAttendance(" + sid + ",s,t)})});"
+            + "return 'started'})()";
     }
 
     private void checkLogin() {
@@ -151,6 +158,11 @@ public class MainActivity extends Activity {
 
     /** The website page calls these. They run on a background thread. */
     private final class Bridge {
+        @JavascriptInterface
+        public void onAttendance(String sessionId, int status, String body) {
+            AttendanceWatch.handle(MainActivity.this, status, body);
+        }
+
         @JavascriptInterface
         public void onTimetable(String sessionId, int status, String body) {
             TimetableSync.Result r = TimetableSync.handle(MainActivity.this, sessionId, status, body);

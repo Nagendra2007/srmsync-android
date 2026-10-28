@@ -53,11 +53,65 @@ final class SilentScheduler {
         long now = System.currentTimeMillis();
 
         List<Interval> classes = p.enabled() ? upcoming(p, now) : Collections.emptyList();
-        boolean inClass = current(classes, now) != null;
+        Interval cur = current(classes, now);
+        boolean endedEarly = now < p.suppressUntil();
+        boolean inClass = cur != null && !endedEarly;
         boolean testing = now < p.testUntil();
 
         applyRinger(app, p, inClass || testing);
-        scheduleAlarm(app, nextChange(classes, now, p.testUntil()));
+
+        // The "Silent until 10:50" notification, only while we really silenced the phone.
+        if ((inClass || testing) && p.appSilenced()) {
+            long until = testing ? p.testUntil() : cur.end;
+            if (testing && inClass) until = Math.max(until, cur.end);
+            Notifier.showSilent(app, until, inClass ? cur.label : "", testing && !inClass);
+        } else {
+            Notifier.clearSilent(app);
+        }
+
+        Reminders.fireDue(app, p, now);
+
+        long next = nextChange(classes, now, p.testUntil());
+        next = earliest(next, p.suppressUntil() > now ? p.suppressUntil() : -1);
+        next = earliest(next, Reminders.nextTime(p, now));
+        scheduleAlarm(app, next);
+
+        WidgetProvider.updateAll(app);
+    }
+
+    private static long earliest(long a, long b) {
+        if (a <= 0) return b;
+        if (b <= 0) return a;
+        return Math.min(a, b);
+    }
+
+    /** One class on a real date: a timetable block plus its actual start and end time. */
+    static final class Occurrence {
+        final long start;
+        final long end;
+        final Timetable.Block block;
+
+        Occurrence(long start, long end, Timetable.Block block) {
+            this.start = start;
+            this.end = end;
+            this.block = block;
+        }
+    }
+
+    /** Every class from today through the next 7 days, unmerged, skipping the skipped day. */
+    static List<Occurrence> occurrences(List<Timetable.Block> blocks, String skip, long now) {
+        List<Occurrence> out = new ArrayList<>();
+        for (int d = 0; d < 8; d++) {
+            Calendar day = Calendar.getInstance();
+            day.setTimeInMillis(now);
+            day.add(Calendar.DAY_OF_YEAR, d);
+            if (dateKey(day.getTimeInMillis()).equals(skip)) continue;
+            int weekday = day.get(Calendar.DAY_OF_WEEK);
+            for (Timetable.Block b : blocks) {   // already sorted by day, then start
+                if (b.day == weekday) out.add(new Occurrence(at(day, b.start), at(day, b.end), b));
+            }
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------ timetable -> real times
@@ -69,33 +123,21 @@ final class SilentScheduler {
 
     static List<Interval> upcoming(List<Timetable.Block> blocks, boolean mergeBreaks, String skip, long now) {
         List<Interval> out = new ArrayList<>();
-        if (blocks.isEmpty()) return out;
-
         long gapAllowed = mergeBreaks ? SHORT_BREAK_MS : 0;
+        Interval last = null;
+        String lastDay = "";
 
-        for (int d = 0; d < 8; d++) {
-            Calendar day = Calendar.getInstance();
-            day.setTimeInMillis(now);
-            day.add(Calendar.DAY_OF_YEAR, d);
-            if (dateKey(day.getTimeInMillis()).equals(skip)) continue;
-
-            int weekday = day.get(Calendar.DAY_OF_WEEK);
-            Interval last = null;
-
-            for (Timetable.Block b : blocks) {   // already sorted by day, then start
-                if (b.day != weekday) continue;
-                long start = at(day, b.start);
-                long end = at(day, b.end);
-
-                if (last != null && start - last.end <= gapAllowed) {
-                    String label = last.label.contains(b.label) ? last.label : last.label + ", " + b.label;
-                    last = new Interval(last.start, Math.max(last.end, end), label);
-                    out.set(out.size() - 1, last);
-                } else {
-                    last = new Interval(start, end, b.label);
-                    out.add(last);
-                }
+        for (Occurrence o : occurrences(blocks, skip, now)) {
+            String day = dateKey(o.start);
+            if (last != null && day.equals(lastDay) && o.start - last.end <= gapAllowed) {
+                String label = last.label.contains(o.block.label) ? last.label : last.label + ", " + o.block.label;
+                last = new Interval(last.start, Math.max(last.end, o.end), label);
+                out.set(out.size() - 1, last);
+            } else {
+                last = new Interval(o.start, o.end, o.block.label);
+                out.add(last);
             }
+            lastDay = day;
         }
         return out;
     }

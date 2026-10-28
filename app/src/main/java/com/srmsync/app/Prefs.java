@@ -59,6 +59,33 @@ final class Prefs {
     boolean syncRequested() { return sp.getBoolean("syncRequested", false); }
     void setSyncRequested(boolean v) { sp.edit().putBoolean("syncRequested", v).commit(); }
 
+    // ---- "End early" on the silent notification ----
+    long suppressUntil() { return sp.getLong("suppressUntil", 0L); }
+    void setSuppressUntil(long v) { sp.edit().putLong("suppressUntil", v).commit(); }
+
+    // ---- class reminders ----
+    boolean remindersOn() { return sp.getBoolean("remindersOn", true); }
+    void setRemindersOn(boolean v) { sp.edit().putBoolean("remindersOn", v).apply(); }
+    int reminderMinutes() { return sp.getInt("reminderMinutes", 10); }
+    void setReminderMinutes(int v) { sp.edit().putInt("reminderMinutes", v).apply(); }
+    long lastReminderAt() { return sp.getLong("lastReminderAt", 0L); }
+    void setLastReminderAt(long v) { sp.edit().putLong("lastReminderAt", v).commit(); }
+
+    // ---- attendance watch ----
+    boolean attendanceAlertsOn() { return sp.getBoolean("attendanceAlertsOn", true); }
+    void setAttendanceAlertsOn(boolean v) { sp.edit().putBoolean("attendanceAlertsOn", v).apply(); }
+    String attendanceJson() { return sp.getString("attendance", "[]"); }
+    long attendanceAt() { return sp.getLong("attendanceAt", 0L); }
+    void saveAttendance(String json, long at) {
+        sp.edit().putString("attendance", json).putLong("attendanceAt", at).commit();
+    }
+    /** What we last warned about, per subject, so we don't repeat ourselves. */
+    String attendanceWarned() { return sp.getString("attendanceWarned", ""); }
+    void setAttendanceWarned(String v) { sp.edit().putString("attendanceWarned", v).commit(); }
+
+    boolean askedNotificationPermission() { return sp.getBoolean("askedNotif", false); }
+    void setAskedNotificationPermission() { sp.edit().putBoolean("askedNotif", true).apply(); }
+
     // ---- ringer bookkeeping ----
     boolean appSilenced() { return sp.getBoolean("appSilenced", false); }
     int prevRinger() { return sp.getInt("prevRinger", -1); }

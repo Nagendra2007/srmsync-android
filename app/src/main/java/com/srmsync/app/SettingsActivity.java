@@ -121,6 +121,8 @@ public class SettingsActivity extends Activity {
         if (!allPermissionsOk()) setupSection();
         if (!all.isEmpty()) todaySection(todays, nowMin, skipping);
         optionsSection();
+        if (!all.isEmpty()) remindersSection();
+        attendanceSection();
         if (!all.isEmpty()) weekSection(all);
         footer();
     }
@@ -254,7 +256,27 @@ public class SettingsActivity extends Activity {
         PowerManager pm = getSystemService(PowerManager.class);
         return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
     }
-    private boolean allPermissionsOk() { return dndOk() && exactOk() && batteryOk(); }
+    private boolean notificationsOk() { return Notifier.allowed(this); }
+    private boolean allPermissionsOk() { return dndOk() && exactOk() && batteryOk() && notificationsOk(); }
+
+    private void fixNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 && !prefs.askedNotificationPermission()) {
+            prefs.setAskedNotificationPermission();
+            requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 7);
+        } else if (Build.VERSION.SDK_INT >= 26) {
+            open(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
+        } else {
+            open(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + getPackageName())));
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        changed();
+    }
 
     private void setupSection() {
         section("Finish setup");
@@ -269,6 +291,11 @@ public class SettingsActivity extends Activity {
             setupRow(card, "Alarms on time", "Silence starts at the bell, not minutes later.", firstRow,
                 () -> open(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
                     Uri.parse("package:" + getPackageName()))));
+            firstRow = false;
+        }
+        if (!notificationsOk()) {
+            setupRow(card, "Notifications", "For the silent-in-class notice, class reminders and attendance warnings.",
+                firstRow, this::fixNotifications);
             firstRow = false;
         }
         if (!batteryOk()) {
@@ -441,6 +468,101 @@ public class SettingsActivity extends Activity {
         }
         t.setOnClickListener(click);
         return t;
+    }
+
+    // ------------------------------------------------------------------ reminders
+
+    private void remindersSection() {
+        section("Reminders");
+        LinearLayout card = card();
+        card.addView(switchRow("Remind me before class", "Shows the subject and the room number",
+            prefs.remindersOn(), on -> { prefs.setRemindersOn(on); changed(); }));
+
+        if (prefs.remindersOn()) {
+            card.addView(divider());
+            LinearLayout seg = row();
+            seg.setPadding(dp(4), dp(4), dp(4), dp(4));
+            seg.setBackground(round(ui.dark ? Color.parseColor("#0A1120") : Color.parseColor("#EEF1F6"), 14));
+            int current = prefs.reminderMinutes();
+            for (int m : new int[] { 5, 10, 15 }) {
+                final int minutes = m;
+                seg.addView(segment(m + " min before", current == m,
+                    v -> { prefs.setReminderMinutes(minutes); changed(); }), weight());
+            }
+            LinearLayout segWrap = column();
+            segWrap.setPadding(dp(14), dp(12), dp(14), dp(14));
+            segWrap.addView(seg);
+            card.addView(segWrap);
+        }
+        addCard(card);
+    }
+
+    // ------------------------------------------------------------------ attendance
+
+    private void attendanceSection() {
+        section("Attendance");
+        LinearLayout card = card();
+        card.addView(switchRow("Warn me near 75%", "A notification when a subject gets close or drops below",
+            prefs.attendanceAlertsOn(), on -> prefs.setAttendanceAlertsOn(on)));
+
+        List<AttendanceWatch.Subject> subjects = AttendanceWatch.saved(prefs);
+        if (subjects.isEmpty()) {
+            card.addView(divider());
+            TextView none = tv("Your subjects show up here after the next sync.", 15, ui.regular, ui.muted);
+            none.setPadding(dp(18), dp(14), dp(18), dp(16));
+            card.addView(none);
+        } else {
+            Collections.sort(subjects, (a, b) -> Double.compare(a.percent, b.percent));   // most at risk first
+            for (AttendanceWatch.Subject s : subjects) {
+                card.addView(divider());
+                card.addView(attendanceRow(s));
+            }
+        }
+        addCard(card);
+
+        if (prefs.attendanceAt() > 0) {
+            TextView when = tv("Updated " + SilentScheduler.clock(prefs.attendanceAt(), "d MMM, HH:mm"),
+                13, ui.regular, ui.muted);
+            when.setPadding(dp(22), dp(8), dp(22), 0);
+            page.addView(when);
+        }
+    }
+
+    private View attendanceRow(AttendanceWatch.Subject s) {
+        LinearLayout r = row();
+        r.setPadding(dp(18), dp(12), dp(16), dp(12));
+
+        int color = s.state == AttendanceWatch.LOW ? Ui.RED
+            : s.state == AttendanceWatch.EDGE ? AMBER : ui.text;
+        TextView pct = tv(String.valueOf(Math.round(Math.floor(s.percent))) + "%", 26, ui.boardSemi, color);
+        pct.setIncludeFontPadding(false);
+        r.addView(pct, new LinearLayout.LayoutParams(dp(74), LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout words = column();
+        TextView name = tv(s.shortName(), 15, ui.medium, ui.text);
+        name.setMaxLines(2);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        words.addView(name);
+        words.addView(tv(s.present + " of " + s.total + ". " + s.advice(), 13, ui.regular, ui.muted));
+        r.addView(words, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        return r;
+    }
+
+    private interface OnToggle { void set(boolean on); }
+
+    private View switchRow(String title, String subtitle, boolean checked, OnToggle onToggle) {
+        LinearLayout r = row();
+        r.setPadding(dp(18), dp(12), dp(14), dp(12));
+        LinearLayout words = column();
+        words.addView(tv(title, 16, ui.semibold, ui.text));
+        words.addView(tv(subtitle, 14, ui.regular, ui.muted));
+        r.addView(words, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        Switch sw = new Switch(this);
+        sw.setChecked(checked);
+        tintSwitch(sw, Ui.RED, ui.line);
+        sw.setOnCheckedChangeListener((b, on) -> onToggle.set(on));
+        r.addView(sw);
+        return r;
     }
 
     // ------------------------------------------------------------------ week
