@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Download Srm Sync</title>
+<link rel="icon" href="icon.png">
+<style>
+  @font-face { font-family: "Barlow"; src: url("Barlow-Regular.ttf"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "Barlow"; src: url("Barlow-SemiBold.ttf"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: "Barlow Condensed"; src: url("BarlowCondensed-Bold.ttf"); font-weight: 700; font-display: swap; }
+
+  :root {
+    --navy: #0F1B2D; --red: #E3262B; --red-press: #C81F24;
+    --bg: #F2F4F8; --card: #FFFFFF; --line: #E1E6EE; --text: #13203A; --muted: #5E6B82;
+    --on-navy: #F4F7FC; --on-navy-muted: #9FB0CB;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --navy: #14213A; --bg: #0A1120; --card: #121B2D; --line: #223049; --text: #E8EDF6; --muted: #8F9DB5; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 400 17px/1.5 "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+  .board { background: var(--navy); color: var(--on-navy); border-radius: 0 0 28px 28px;
+           padding: calc(28px + env(safe-area-inset-top, 0px)) 22px 30px; }
+  .wrap { max-width: 460px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand img { width: 64px; height: 64px; border-radius: 16px; }
+  h1 { font: 700 46px/1 "Barlow Condensed", "Arial Narrow", sans-serif; margin: 0; letter-spacing: .2px; }
+  .tagline { color: var(--on-navy-muted); margin: 14px 0 22px; font-size: 18px; }
+
+  .download { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+              background: var(--red); color: #fff; text-decoration: none; border-radius: 16px;
+              padding: 17px 20px; font-weight: 600; font-size: 19px; transition: background .15s; }
+  .download:active { background: var(--red-press); }
+  .download:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .download svg { width: 22px; height: 22px; flex: none; }
+  .meta { color: var(--on-navy-muted); font-size: 14px; margin-top: 12px; text-align: center; }
+
+  main { padding: 6px 22px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  h2 { font-weight: 600; font-size: 20px; margin: 28px 0 12px; }
+  ol { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line);
+       border-radius: 20px; counter-reset: step; }
+  ol li { counter-increment: step; display: grid; grid-template-columns: 38px 1fr; gap: 2px 10px;
+          padding: 16px 18px; }
+  ol li + li { border-top: 1px solid var(--line); }
+  ol li::before { content: counter(step); grid-row: span 2; font: 700 30px/1 "Barlow Condensed", sans-serif; color: var(--red); }
+  ol b { font-weight: 600; }
+  ol span { color: var(--muted); font-size: 15px; }
+
+  .note { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px 18px; }
+  .note p { margin: 0; color: var(--muted); font-size: 15px; }
+  .note p + p { margin-top: 10px; }
+  .note b { color: var(--text); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .download { transition: none; } }
+</style>
+</head>
+<body>
+  <header class="board">
+    <div class="wrap">
+      <div class="brand">
+        <img src="icon.png" alt="">
+        <h1>Srm Sync</h1>
+      </div>
+      <p class="tagline">Your SRM AP portal in an app. Your phone goes silent in class and rings again after.</p>
+      <a class="download" href="SrmSync.apk?v=392932a" download="SrmSync.apk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+        Download for Android
+      </a>
+      <p class="meta">Version 1.8 · 396 KB · updated 28 Oct 2026</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h2>Install it</h2>
+    <ol>
+      <li><b>Tap Download</b><span>The file is called SrmSync.apk.</span></li>
+      <li><b>Open the file</b><span>If Android asks, allow installing apps from your browser.</span></li>
+      <li><b>Tap Install</b><span>Play Protect may warn you because the app isn’t from the Play Store. Tap “Install anyway”.</span></li>
+    </ol>
+
+    <h2>Download not starting?</h2>
+    <div class="note">
+      <p><b>Opened this inside WhatsApp, Telegram or another app?</b> Tap the ⋮ menu and choose “Open in Chrome”, then download again.</p>
+      <p><b>Updating?</b> Install over the old version. Your settings and timetable stay.</p>
+    </div>
+  </main>
+</body>
+</html>
