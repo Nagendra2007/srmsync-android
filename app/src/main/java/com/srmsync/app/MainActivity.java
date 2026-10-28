@@ -282,6 +282,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        web.resumeTimers();
         handler.post(poll);
     }
 
@@ -289,6 +290,10 @@ public class MainActivity extends Activity {
     protected void onPause() {
         handler.removeCallbacks(poll);
         web.onPause();
+        // onPause() alone stops drawing but NOT the website's JavaScript timers
+        // (it re-renders the live-class box every 30 s). This freezes them too,
+        // so the page uses no power while you're outside the app.
+        web.pauseTimers();
         super.onPause();
     }
 

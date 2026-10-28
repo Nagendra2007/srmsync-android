@@ -74,9 +74,23 @@ final class SilentScheduler {
         long next = nextChange(classes, now, p.testUntil());
         next = earliest(next, p.suppressUntil() > now ? p.suppressUntil() : -1);
         next = earliest(next, Reminders.nextTime(p, now));
+        // One wake-up just after midnight, so the widget's "today / tomorrow"
+        // wording rolls over. Replaces the widget's own 30-minute refresh.
+        next = earliest(next, nextMidnight(now));
         scheduleAlarm(app, next);
 
         WidgetProvider.updateAll(app);
+    }
+
+    private static long nextMidnight(long now) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(now);
+        c.add(Calendar.DAY_OF_YEAR, 1);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 30);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
     }
 
     private static long earliest(long a, long b) {
