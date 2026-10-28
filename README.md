@@ -1,4 +1,4 @@
-# SRMSync Android app
+# Srm Sync (Android app)
 
 Shows srmsync.in inside an app, and puts your phone on silent during classes
 using your SRM timetable, then switches it back when the class ends.

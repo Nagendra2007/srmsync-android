@@ -15,7 +15,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="SRMSync"
+        android:label="Srm Sync"
         android:theme="@style/AppTheme">
 
         <activity
@@ -31,8 +31,8 @@
         <activity
             android:name=".SettingsActivity"
             android:exported="false"
-            android:label="Class silent mode"
-            android:theme="@style/SettingsTheme" />
+            android:label="Class silent"
+            android:theme="@style/AppTheme" />
 
         <receiver android:name=".AlarmReceiver" android:exported="false" />
 

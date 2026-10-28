@@ -211,7 +211,7 @@ final class SilentScheduler {
             sb.append("Test running: silent until ").append(clock(p.testUntil(), "HH:mm:ss")).append(".\n\n");
         }
         if (Timetable.fromJson(p.blocksJson()).isEmpty()) {
-            return sb.append("No timetable yet. Go back, log in to SRMSync once, and it syncs by itself.").toString();
+            return sb.append("No timetable yet. Go back, log in to Srm Sync once, and it syncs by itself.").toString();
         }
         if (!p.enabled()) {
             return sb.append("Auto-silent is switched off.").toString();

@@ -78,7 +78,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);          // the site keeps its login in localStorage
         s.setSupportZoom(false);
-        s.setUserAgentString(s.getUserAgentString() + " SRMSyncApp/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " SrmSyncApp/1.2");
 
         web.addJavascriptInterface(new Bridge(), "SRMSyncApp");
         web.setWebChromeClient(new WebChromeClient());   // makes alert()/confirm() work
@@ -235,7 +235,7 @@ public class MainActivity extends Activity {
         prefs.setOnboarded();
         new AlertDialog.Builder(this)
             .setTitle("Auto-silent in class")
-            .setMessage("This app can put your phone on silent during your classes and switch it back "
+            .setMessage("Srm Sync can put your phone on silent during your classes and switch it back "
                 + "after, using your SRM timetable.\n\nIt needs two or three permissions. Set it up now? "
                 + "(You can always open it later with the red \uD83D\uDD15 button.)")
             .setPositiveButton("Set up", (d, w) -> startActivity(new Intent(this, SettingsActivity.class)))

@@ -45,5 +45,5 @@ jobs:
           gh release delete apk-latest --yes --cleanup-tag || true
           gh release create apk-latest SRMSync.apk \
             --target "$GITHUB_SHA" \
-            --title "SRMSync APK (latest)" \
+            --title "Srm Sync APK (latest)" \
             --notes "Built from commit ${GITHUB_SHA::7}. Open this page on your phone and tap SRMSync.apk to download it."
