@@ -1,30 +1,22 @@
 package com.srmsync.app;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Downloads the timetable from your own server (GET /api/timetable),
- * using the same login session the website inside the app is using.
+ * Handles the timetable that the website page fetched for us.
+ *
+ * The download itself happens inside the WebView (see MainActivity), using the
+ * page's own fetch(), so it goes out exactly like the website's own requests.
+ * This class only decides whether to sync, and turns the answer into saved classes.
  */
 final class TimetableSync {
 
-    static final String API = "https://srmsync.in/api/timetable";
-
-    interface Callback {
-        void done(boolean ok, boolean changed, String message);
-    }
-
-    private static final class Result {
+    static final class Result {
         final boolean ok;
         final boolean changed;
         final String message;
@@ -36,8 +28,6 @@ final class TimetableSync {
         }
     }
 
-    private static final AtomicBoolean running = new AtomicBoolean(false);
-
     private TimetableSync() {}
 
     /** Sync when we see a new login, or the saved copy is older than 6 hours. */
@@ -46,63 +36,63 @@ final class TimetableSync {
         return !sessionId.equals(p.lastSyncSession()) || now - p.lastSyncAt() > 6 * 60 * 60_000L;
     }
 
-    static void sync(Context context, String sessionId, Callback callback) {
-        Handler main = new Handler(Looper.getMainLooper());
-        if (!running.compareAndSet(false, true)) {
-            if (callback != null) main.post(() -> callback.done(false, false, "A sync is already running."));
-            return;
-        }
-
+    static Result handle(Context context, String sessionId, int status, String body) {
         Context app = context.getApplicationContext();
         Prefs p = new Prefs(app);
-        p.setLastAttemptAt(System.currentTimeMillis());
-
-        new Thread(() -> {
-            Result result = fetch(app, p, sessionId);
-            running.set(false);
-            if (callback != null) {
-                main.post(() -> callback.done(result.ok, result.changed, result.message));
-            }
-        }, "timetable-sync").start();
+        Result r = process(app, p, sessionId, status, body);
+        p.setLastSyncMessage(SilentScheduler.clock(System.currentTimeMillis(), "d MMM, HH:mm") + " \u2013 " + r.message);
+        return r;
     }
 
-    private static Result fetch(Context app, Prefs p, String sessionId) {
-        HttpURLConnection con = null;
+    private static Result process(Context app, Prefs p, String sessionId, int status, String body) {
+        if (status == 0) {
+            return new Result(false, false, "Couldn't reach the server (" + shorten(body) + ").");
+        }
+        if (status == 401) {
+            return new Result(false, false, "Login session expired. Log out and log in again, then sync.");
+        }
+        if (status != 200) {
+            return new Result(false, false, "Server answered " + status + ": " + shorten(body));
+        }
         try {
-            con = (HttpURLConnection) new URL(API).openConnection();
-            con.setConnectTimeout(20_000);
-            con.setReadTimeout(30_000);
-            con.setRequestProperty("X-Client-Session", sessionId);
-            con.setRequestProperty("Accept", "application/json");
-
-            int code = con.getResponseCode();
-            if (code == 401) {
-                return new Result(false, false, "Login session expired. Log in again on the main screen, then sync.");
-            }
-            if (code != 200) {
-                return new Result(false, false, "Server answered " + code + ". Try again later.");
-            }
-
-            StringBuilder body = new StringBuilder();
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = r.readLine()) != null) body.append(line).append('\n');
-            }
-
-            List<Timetable.Block> blocks = Timetable.parse(body.toString());
+            List<Timetable.Block> blocks = Timetable.parse(body);
             if (blocks.isEmpty()) {
-                return new Result(false, false, "The timetable came back empty, so the old one was kept.");
+                return new Result(false, false, "Got the timetable but found no classes in it. " + hint(body));
             }
-
             String json = Timetable.toJson(blocks);
             boolean changed = !json.equals(p.blocksJson());
             p.saveTimetable(json, sessionId, System.currentTimeMillis());
             SilentScheduler.refresh(app);
             return new Result(true, changed, "Timetable synced: " + blocks.size() + " classes a week.");
         } catch (Exception e) {
-            return new Result(false, false, "Sync failed: " + e.getClass().getSimpleName() + ". Check your internet.");
-        } finally {
-            if (con != null) con.disconnect();
+            return new Result(false, false, "Couldn't read the timetable: " + shorten(body));
         }
+    }
+
+    /** A short clue for empty results, so we can see what the server actually sent. */
+    private static String hint(String body) {
+        try {
+            JSONObject root = new JSONObject(body);
+            JSONArray schedule = root.optJSONArray("schedule");
+            int days = schedule == null ? 0 : schedule.length();
+            String day = "";
+            String time = "";
+            if (days > 0) {
+                JSONObject row = schedule.optJSONObject(0);
+                day = row == null ? "" : row.optString("day", "");
+                JSONArray slots = row == null ? null : row.optJSONArray("slots");
+                JSONObject slot = slots == null ? null : slots.optJSONObject(0);
+                time = slot == null ? "" : slot.optString("time", slot.optString("timing", ""));
+            }
+            return "(days: " + days + ", first day: \"" + day + "\", first time: \"" + time + "\")";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static String shorten(String s) {
+        if (s == null) return "";
+        s = s.replaceAll("\\s+", " ").trim();
+        return s.length() > 120 ? s.substring(0, 120) + "\u2026" : s;
     }
 }

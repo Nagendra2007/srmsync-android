@@ -14,6 +14,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -25,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  * The main screen: your srmsync.in website, shown inside the app,
@@ -78,6 +80,7 @@ public class MainActivity extends Activity {
         s.setSupportZoom(false);
         s.setUserAgentString(s.getUserAgentString() + " SRMSyncApp/1.0");
 
+        web.addJavascriptInterface(new Bridge(), "SRMSyncApp");
         web.setWebChromeClient(new WebChromeClient());   // makes alert()/confirm() work
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -107,22 +110,57 @@ public class MainActivity extends Activity {
 
     // ------------------------------------------------------------------ timetable sync
 
+    /** Reads the login session id the website saved (either storage), or "" if logged out. */
+    private static final String READ_SESSION_JS =
+        "(function(){try{if(!/(^|\\.)srmsync\\.in$/.test(location.hostname))return '';"
+        + "return sessionStorage.getItem('sessionId')||localStorage.getItem('sessionId')||''}"
+        + "catch(e){return ''}})()";
+
+    /** Asks the page itself to fetch /api/timetable and hand the answer to the app. */
+    private static String fetchTimetableJs(String sessionId) {
+        String sid = JSONObject.quote(sessionId);
+        return "(function(){fetch(location.origin+'/api/timetable',{headers:{'X-Client-Session':" + sid + "}})"
+            + ".then(function(r){return r.text().then(function(t){SRMSyncApp.onTimetable(" + sid + ",r.status,t)})})"
+            + ".catch(function(e){SRMSyncApp.onTimetable(" + sid + ",0,String(e))});return 'started'})()";
+    }
+
     private void checkLogin() {
         if (web == null) return;
-        web.evaluateJavascript("(function(){try{return localStorage.getItem('sessionId')||''}catch(e){return ''}})()", value -> {
+        boolean forced = prefs.syncRequested();
+        web.evaluateJavascript(READ_SESSION_JS, value -> {
             String sessionId = unquote(value);
-            if (sessionId.isEmpty()) return;
+            if (sessionId.isEmpty()) {
+                if (forced) {
+                    prefs.setSyncRequested(false);
+                    Toast.makeText(this, "Log in first, then sync again.", Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
             prefs.setLastSessionSeen(sessionId);
 
-            if (TimetableSync.isDue(prefs, sessionId, System.currentTimeMillis())) {
-                boolean firstEver = prefs.lastSyncAt() == 0;
-                TimetableSync.sync(this, sessionId, (ok, changed, message) -> {
-                    if (ok && (firstEver || changed)) {
-                        Toast.makeText(this, message + " Auto-silent is ready.", Toast.LENGTH_LONG).show();
-                    }
-                });
+            if (forced || TimetableSync.isDue(prefs, sessionId, System.currentTimeMillis())) {
+                prefs.setSyncRequested(false);
+                prefs.setLastAttemptAt(System.currentTimeMillis());
+                showSyncToast = forced || prefs.lastSyncAt() == 0;
+                if (web != null) web.evaluateJavascript(fetchTimetableJs(sessionId), null);
             }
         });
+    }
+
+    private volatile boolean showSyncToast;
+
+    /** The website page calls these. They run on a background thread. */
+    private final class Bridge {
+        @JavascriptInterface
+        public void onTimetable(String sessionId, int status, String body) {
+            TimetableSync.Result r = TimetableSync.handle(MainActivity.this, sessionId, status, body);
+            boolean show = showSyncToast || r.changed;   // background re-syncs stay quiet
+            showSyncToast = false;
+            if (show) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                    r.ok ? r.message + " Auto-silent is ready." : r.message, Toast.LENGTH_LONG).show());
+            }
+        }
     }
 
     /** evaluateJavascript returns a JSON-quoted string; this strips the quotes. */

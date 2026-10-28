@@ -144,19 +144,14 @@ public class SettingsActivity extends Activity {
         long last = prefs.lastSyncAt();
         text(last == 0 ? "Not synced yet." : "Last synced: " + SilentScheduler.clock(last, "d MMM, HH:mm"), 13);
 
+        String lastMsg = prefs.lastSyncMessage();
+        if (!lastMsg.isEmpty()) text("Last attempt: " + lastMsg, 13);
+
         Button sync = button("Sync timetable now");
         sync.setOnClickListener(v -> {
-            String sid = prefs.lastSessionSeen();
-            if (sid.isEmpty()) {
-                toast("Log in to SRMSync on the main screen first.");
-                return;
-            }
-            sync.setEnabled(false);
-            sync.setText("Syncing\u2026");
-            TimetableSync.sync(this, sid, (ok, changedTimetable, message) -> {
-                toast(message);
-                render();
-            });
+            // The sync runs through the website page, so go back to it.
+            prefs.setSyncRequested(true);
+            finish();
         });
 
         showWeek();

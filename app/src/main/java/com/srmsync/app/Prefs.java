@@ -51,6 +51,14 @@ final class Prefs {
     String lastSessionSeen() { return sp.getString("lastSessionSeen", ""); }
     void setLastSessionSeen(String v) { sp.edit().putString("lastSessionSeen", v).apply(); }
 
+    /** Result of the last sync attempt, shown on the settings screen. */
+    String lastSyncMessage() { return sp.getString("lastSyncMessage", ""); }
+    void setLastSyncMessage(String v) { sp.edit().putString("lastSyncMessage", v).apply(); }
+
+    /** Set by the settings screen's "Sync now" button; the main screen does the sync. */
+    boolean syncRequested() { return sp.getBoolean("syncRequested", false); }
+    void setSyncRequested(boolean v) { sp.edit().putBoolean("syncRequested", v).commit(); }
+
     // ---- ringer bookkeeping ----
     boolean appSilenced() { return sp.getBoolean("appSilenced", false); }
     int prevRinger() { return sp.getInt("prevRinger", -1); }
