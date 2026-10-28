@@ -8,12 +8,16 @@
     android:padding="16dp">
 
     <!-- red bar on the left, like the class blocks in the app -->
-    <View
+    <!-- Widgets only allow certain views; a plain View tag breaks the whole widget,
+         so the bar is an ImageView. -->
+    <ImageView
         android:id="@+id/widget_bar"
         android:layout_width="4dp"
         android:layout_height="match_parent"
         android:layout_marginEnd="14dp"
-        android:background="@drawable/widget_strip" />
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_strip" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -24,6 +28,7 @@
 
         <TextView
             android:id="@+id/widget_status"
+            android:text="Next class"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
@@ -32,6 +37,7 @@
 
         <TextView
             android:id="@+id/widget_time"
+            android:text="09:00"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-condensed"
@@ -43,6 +49,7 @@
 
         <TextView
             android:id="@+id/widget_label"
+            android:text="Your next class"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
@@ -53,6 +60,7 @@
 
         <TextView
             android:id="@+id/widget_room"
+            android:text="Room"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
