@@ -121,8 +121,8 @@ public class MainActivity extends Activity {
         + "catch(e){return ''}})()";
 
     /**
-     * Asks the page itself to fetch the timetable, then attendance (one after the other,
-     * so they don't trip over each other on the server), and hand both to the app.
+     * Asks the page itself to fetch the timetable, then attendance, then internal marks
+     * (one after the other, so they don't trip over each other on the server).
      */
     private static String fetchTimetableJs(String sessionId) {
         String sid = JSONObject.quote(sessionId);
@@ -131,7 +131,8 @@ public class MainActivity extends Activity {
             + ".then(function(r){return r.text().then(function(t){cb(r.status,t)})})"
             + ".catch(function(e){cb(0,String(e))})}"
             + "get('/api/timetable',function(s,t){SRMSyncApp.onTimetable(" + sid + ",s,t)})"
-            + ".then(function(){return get('/api/attendance',function(s,t){SRMSyncApp.onAttendance(" + sid + ",s,t)})});"
+            + ".then(function(){return get('/api/attendance',function(s,t){SRMSyncApp.onAttendance(" + sid + ",s,t)})})"
+            + ".then(function(){return get('/api/internal-marks',function(s,t){SRMSyncApp.onMarks(" + sid + ",s,t)})});"
             + "return 'started'})()";
     }
 
@@ -165,6 +166,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void onAttendance(String sessionId, int status, String body) {
             AttendanceWatch.handle(MainActivity.this, status, body);
+        }
+
+        @JavascriptInterface
+        public void onMarks(String sessionId, int status, String body) {
+            Marks.handle(MainActivity.this, status, body);
         }
 
         @JavascriptInterface

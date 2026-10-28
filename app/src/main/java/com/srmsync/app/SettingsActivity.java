@@ -120,6 +120,7 @@ public class SettingsActivity extends Activity {
 
         if (!allPermissionsOk()) setupSection();
         if (!all.isEmpty()) todaySection(todays, nowMin, skipping);
+        shareSection();
         optionsSection();
         if (!all.isEmpty()) remindersSection();
         attendanceSection();
@@ -406,6 +407,43 @@ public class SettingsActivity extends Activity {
             r.addView(t, tlp);
         }
         return r;
+    }
+
+    // ------------------------------------------------------------------ share
+
+    private void shareSection() {
+        section("Share");
+        LinearLayout tiles = row();
+        tiles.setPadding(dp(16), 0, dp(16), 0);
+        tiles.addView(shareTile("Timetable", "Week or just today", v -> ShareMenu.timetable(this)), tileLp(false));
+        tiles.addView(shareTile("Attendance", "With % and how many you can miss", v -> ShareMenu.attendance(this)), tileLp(true));
+        tiles.addView(shareTile("Marks", "Internal marks with the breakdown", v -> ShareMenu.marks(this)), tileLp(true));
+        page.addView(tiles);
+    }
+
+    private View shareTile(String title, String sub, View.OnClickListener click) {
+        LinearLayout t = column();
+        t.setPadding(dp(14), dp(14), dp(12), dp(16));
+        t.setBackground(rippleStroke(ui.card, ui.line, 18));
+        t.setContentDescription("Share " + title);
+        TextView arrow = tv("\u2197", 22, ui.semibold, Ui.RED);   // share arrow
+        arrow.setIncludeFontPadding(false);
+        t.addView(arrow);
+        TextView name = tv(title, 16, ui.semibold, ui.text);
+        name.setPadding(0, dp(10), 0, dp(2));
+        name.setMaxLines(1);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        t.addView(name);
+        t.addView(tv(sub, 13, ui.regular, ui.muted));
+        t.setOnClickListener(click);
+        return t;
+    }
+
+    /** Equal-width tiles that all stretch to the tallest one. */
+    private LinearLayout.LayoutParams tileLp(boolean gapBefore) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        if (gapBefore) lp.leftMargin = dp(10);
+        return lp;
     }
 
     // ------------------------------------------------------------------ options

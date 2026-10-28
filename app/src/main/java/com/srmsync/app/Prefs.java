@@ -86,6 +86,13 @@ final class Prefs {
     boolean askedNotificationPermission() { return sp.getBoolean("askedNotif", false); }
     void setAskedNotificationPermission() { sp.edit().putBoolean("askedNotif", true).apply(); }
 
+    // ---- marks (for sharing) ----
+    String marksJson() { return sp.getString("marks", "[]"); }
+    long marksAt() { return sp.getLong("marksAt", 0L); }
+    void saveMarks(String json, long at) {
+        sp.edit().putString("marks", json).putLong("marksAt", at).commit();
+    }
+
     // ---- update check ----
     long lastUpdateCheck() { return sp.getLong("lastUpdateCheck", 0L); }
     void setLastUpdateCheck(long v) { sp.edit().putLong("lastUpdateCheck", v).apply(); }
